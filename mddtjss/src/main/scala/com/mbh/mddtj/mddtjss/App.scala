@@ -22,6 +22,7 @@ object App
 {
 def main(args: Array[String]) : Unit = 
 	{
+    // 入参判断
     if (args.length != 2) 
     {  
       System.err.println("Usage: <input file> <output folder>")  
@@ -29,10 +30,11 @@ def main(args: Array[String]) : Unit =
       System.exit(2);
     }  		
     
+    // spark 配置
     val conf = new SparkConf().setAppName("mddtjss")
     val sc = new SparkContext(conf)
     
-    
+    // 结果输出文件到HDFS
     val cf = new Configuration()
     // cf.set("fs.defaultFS", "hdfs://192.168.199.201:9000")
     val fs= FileSystem.get(cf)    
@@ -44,12 +46,14 @@ def main(args: Array[String]) : Unit =
   		fs.delete(p,true);
   	}        
 		
+    // 中间结果集
 		val mapcity = new HashMap[String, Set[Int]] with MultiMap[String, Int]
 		val mapchannel = new HashMap[String, Set[Int]] with MultiMap[String, Int]
 		val mapyearmonth = new HashMap[String, Set[Int]] with MultiMap[String, Int]
 		val mapapp = new HashMap[String, Set[Int]] with MultiMap[String, Int]
 		val mapcitychannel = new HashMap[String, Set[Int]] with MultiMap[String, Int]    
     
+		// 遍历日志文件，解析出中间结果
 		val file = sc.textFile(args(0))
     file.collect().foreach(line => {
       val info = line.split(",")      
@@ -60,6 +64,7 @@ def main(args: Array[String]) : Unit =
 		  mapcitychannel.addBinding(info(0) + "-" + info(1), info(4).toInt)		
     }) 
     
+    // 进行合计map计算
     val mycity = mapcity.map(x => (x._1, x._2.sum))		
     mycity.foreach{println}
     
@@ -68,6 +73,7 @@ def main(args: Array[String]) : Unit =
 		val myapp = mapapp.map(x => (x._1, x._2.sum))		
 		val mycitychannel = mapcitychannel.map(x => (x._1, x._2.sum))
 		
+		// 写入结果文件
     val output = fs.create(p, true)
 		val writer = new PrintWriter(output, true)
 
